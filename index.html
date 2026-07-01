@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>每日喝水提醒</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #f0f7ff;
+      --card: #ffffff;
+      --text: #1e3a5f;
+      --text-secondary: #6b8db5;
+      --accent: #3b9eff;
+      --accent-light: #e1f0ff;
+      --accent-dark: #1a7ae6;
+      --water: #4db8ff;
+      --water-deep: #1a8cff;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --border: #dce8f5;
+      --shadow: 0 4px 24px rgba(30, 58, 95, 0.08);
+      --shadow-lg: 0 8px 40px rgba(30, 58, 95, 0.12);
+    }
+
+    .dark {
+      --bg: #0c1829;
+      --card: #152238;
+      --text: #e0ecff;
+      --text-secondary: #7ba3cc;
+      --accent: #4db8ff;
+      --accent-light: #1a3352;
+      --accent-dark: #80ccff;
+      --water: #4db8ff;
+      --water-deep: #1a8cff;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --border: #1e3a5f;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .header-left h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-left p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s;
+      box-shadow: var(--shadow);
+    }
+
+    .theme-toggle:hover { transform: scale(1.05); }
+
+    /* Water Bottle */
+    .bottle-section {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .bottle-container {
+      position: relative;
+      width: 160px;
+      height: 240px;
+      margin: 0 auto 20px;
+    }
+
+    .bottle {
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--border);
+      border-radius: 12px 12px 20px 20px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .bottle-cap {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 8px 8px 0 0;
+      z-index: 2;
+    }
+
+    .water-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, var(--water) 0%, var(--water-deep) 100%);
+      transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 0 0 17px 17px;
+    }
+
+    .water-fill::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: -5%;
+      width: 110%;
+      height: 16px;
+      background: var(--water);
+      border-radius: 50%;
+      animation: wave 2.5s ease-in-out infinite;
+    }
+
+    .water-fill::after {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -5%;
+      width: 110%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      animation: wave 3s ease-in-out infinite reverse;
+    }
+
+    @keyframes wave {
+      0%, 100% { transform: translateX(-3%) rotate(-1deg); }
+      50% { transform: translateX(3%) rotate(1deg); }
+    }
+
+    .bottle-markers {
+      position: absolute;
+      top: 0;
+      right: -36px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .bottle-marker {
+      font-size: 10px;
+      color: var(--text-secondary);
+      line-height: 1;
+    }
+
+    .bottle-glow {
+      position: absolute;
+      inset: -4px;
+      border-radius: 16px 16px 24px 24px;
+      opacity: 0;
+      transition: opacity 0.6s;
+      box-shadow: 0 0 30px rgba(77, 184, 255, 0.3);
+    }
+
+    .bottle-glow.active { opacity: 1; }
+
+    .progress-text {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .progress-text span {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .progress-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .progress-bar-wrapper {
+      margin-top: 16px;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--water) 0%, var(--accent) 100%);
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Quick Add */
+    .quick-add-section {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quick-add-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .quick-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 8px;
+      border-radius: 16px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 158, 255, 0.15);
+    }
+
+    .quick-btn:active { transform: translateY(0) scale(0.96); }
+
+    .quick-btn .icon { font-size: 24px; margin-bottom: 4px; }
+    .quick-btn .amount { font-size: 14px; font-weight: 600; color: var(--text); }
+    .quick-btn .unit { font-size: 11px; color: var(--text-secondary); }
+
+    /* Custom Add */
+    .custom-add {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .custom-input {
+      flex: 1;
+      height: 44px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      padding: 0 14px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .custom-input:focus { border-color: var(--accent); }
+
+    .custom-input::placeholder { color: var(--text-secondary); }
+
+    .custom-btn {
+      height: 44px;
+      padding: 0 20px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .custom-btn:hover { background: var(--accent-dark); }
+    .custom-btn:active { transform: scale(0.96); }
+
+    /* Reminder Section */
+    .reminder-section {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .reminder-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--border);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle-switch.active { background: var(--accent); }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .toggle-switch.active::after { transform: translateX(22px); }
+
+    .reminder-config {
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: all 0.3s;
+    }
+
+    .reminder-config.active { opacity: 1; pointer-events: auto; }
+
+    .reminder-select {
+      height: 40px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      padding: 0 12px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .reminder-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* History Section */
+    .history-section {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .clear-btn {
+      font-size: 12px;
+      color: var(--danger);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 8px;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+
+    .clear-btn:hover { background: rgba(248, 113, 113, 0.1); }
+
+    .history-list {
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 12px;
+      margin-bottom: 6px;
+      background: var(--bg);
+      animation: slideIn 0.3s ease-out;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover { background: var(--accent-light); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .history-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .history-icon { font-size: 20px; }
+    .history-amount { font-size: 14px; font-weight: 500; }
+    .history-time { font-size: 12px; color: var(--text-secondary); }
+
+    .history-delete {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .history-delete:hover { background: rgba(248, 113, 113, 0.1); color: var(--danger); }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .empty-state .emoji { font-size: 36px; margin-bottom: 8px; }
+
+    /* Motivational Quote */
+    .motivation {
+      text-align: center;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    /* Achievement Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 14px 24px;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast .toast-icon { font-size: 22px; }
+
+    /* Celebration */
+    .celebration {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .app-container { padding: 16px 12px 32px; }
+      .bottle-section { padding: 24px 16px; }
+      .quick-add-grid { gap: 8px; }
+      .quick-btn { padding: 12px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>今日喝水</h1>
+        <p id="dateDisplay"></p>
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+    </div>
+
+    <!-- Water Bottle Progress -->
+    <div class="bottle-section">
+      <div class="bottle-container">
+        <div class="bottle-cap"></div>
+        <div class="bottle">
+          <div class="water-fill" id="waterFill"></div>
+        </div>
+        <div class="bottle-markers">
+          <span class="bottle-marker">2L</span>
+          <span class="bottle-marker">1.5L</span>
+          <span class="bottle-marker">1L</span>
+          <span class="bottle-marker">0.5L</span>
+          <span class="bottle-marker">0</span>
+        </div>
+        <div class="bottle-glow" id="bottleGlow"></div>
+      </div>
+      <div class="progress-text">
+        <span id="currentAmount">0</span>ml <span>/ 2000ml</span>
+      </div>
+      <div class="progress-sub" id="progressSub">还需饮用 2000ml 达成目标</div>
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+    </div>
+
+    <!-- Quick Add -->
+    <div class="quick-add-section">
+      <div class="section-title">💧 快速记录</div>
+      <div class="quick-add-grid">
+        <button class="quick-btn" onclick="addWater(100)">
+          <span class="icon">🥛</span>
+          <span class="amount">100</span>
+          <span class="unit">毫升</span>
+        </button>
+        <button class="quick-btn" onclick="addWater(200)">
+          <span class="icon">🍵</span>
+          <span class="amount">200</span>
+          <span class="unit">毫升</span>
+        </button>
+        <button class="quick-btn" onclick="addWater(300)">
+          <span class="icon">☕</span>
+          <span class="amount">300</span>
+          <span class="unit">毫升</span>
+        </button>
+        <button class="quick-btn" onclick="addWater(500)">
+          <span class="icon">🫗</span>
+          <span class="amount">500</span>
+          <span class="unit">毫升</span>
+        </button>
+      </div>
+      <div class="custom-add">
+        <input type="number" class="custom-input" id="customAmount" placeholder="自定义毫升数..." min="1" max="2000" />
+        <button class="custom-btn" onclick="addCustomWater()">添加</button>
+      </div>
+    </div>
+
+    <!-- Reminder -->
+    <div class="reminder-section">
+      <div class="reminder-header">
+        <div class="section-title" style="margin-bottom:0">⏰ 喝水提醒</div>
+        <div class="toggle-switch" id="reminderToggle" onclick="toggleReminder()"></div>
+      </div>
+      <div class="reminder-config" id="reminderConfig">
+        <span class="reminder-label">每隔</span>
+        <select class="reminder-select" id="reminderInterval">
+          <option value="30">30 分钟</option>
+          <option value="45">45 分钟</option>
+          <option value="60" selected>1 小时</option>
+          <option value="90">1.5 小时</option>
+          <option value="120">2 小时</option>
+        </select>
+        <span class="reminder-label">提醒一次</span>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-header">
+        <div class="section-title" style="margin-bottom:0">📋 今日记录</div>
+        <button class="clear-btn" onclick="clearHistory()">清空记录</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- Motivational -->
+    <div class="motivation" id="motivation"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">🎉</span>
+    <span id="toastText"></span>
+  </div>
+
+  <!-- Celebration Canvas -->
+  <canvas class="celebration" id="celebrationCanvas"></canvas>
+
+  <script>
+    // --- State ---
+    const GOAL = 2000; // 2L = 2000ml
+    let state = loadState();
+
+    function getToday() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('water-reminder-state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.date === getToday()) return parsed;
+        }
+      } catch(e) {}
+      return { date: getToday(), amount: 0, records: [] };
+    }
+
+    function saveState() {
+      state.date = getToday();
+      localStorage.setItem('water-reminder-state', JSON.stringify(state));
+    }
+
+    // --- Rendering ---
+    function render() {
+      const percent = Math.min(state.amount / GOAL * 100, 100);
+      const remaining = Math.max(GOAL - state.amount, 0);
+
+      // Water fill
+      document.getElementById('waterFill').style.height = percent + '%';
+
+      // Progress text
+      document.getElementById('currentAmount').textContent = state.amount;
+
+      // Sub text
+      if (state.amount >= GOAL) {
+        document.getElementById('progressSub').textContent = '太棒了！今日目标已达成！🎉';
+        document.getElementById('bottleGlow').classList.add('active');
+      } else {
+        document.getElementById('progressSub').textContent = `还需饮用 ${remaining}ml 达成目标`;
+        document.getElementById('bottleGlow').classList.remove('active');
+      }
+
+      // Progress bar
+      document.getElementById('progressBar').style.width = percent + '%';
+
+      // History
+      renderHistory();
+
+      // Motivation
+      renderMotivation();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      if (state.records.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="emoji">💧</div>还没有记录，快来喝杯水吧</div>';
+        return;
+      }
+
+      list.innerHTML = state.records.map((r, i) => `
+        <div class="history-item">
+          <div class="history-item-left">
+            <span class="history-icon">${getDrinkIcon(r.amount)}</span>
+            <div>
+              <div class="history-amount">${r.amount}ml</div>
+              <div class="history-time">${r.time}</div>
+            </div>
+          </div>
+          <button class="history-delete" onclick="deleteRecord(${i})" title="删除">✕</button>
+        </div>
+      `).reverse().join('');
+    }
+
+    function getDrinkIcon(amount) {
+      if (amount <= 100) return '🥛';
+      if (amount <= 200) return '🍵';
+      if (amount <= 300) return '☕';
+      if (amount <= 500) return '🫗';
+      return '🏺';
+    }
+
+    const quotes = [
+      '水是生命之源，每一口都在滋养你的身体 💧',
+      '多喝水，皮肤好，老公更帅 😎',
+      '喝水能提神醒脑，工作更高效 💪',
+      '保持水分充足，身体会感谢你的 🌟',
+      '一小口水，一份对自己的关爱 💙',
+      '健康生活，从喝水开始 🌈',
+      '足够的水分让你精力充沛 ⚡',
+      '记得喝水，我在关心你哦 ❤️',
+    ];
+
+    function renderMotivation() {
+      const idx = Math.floor(Date.now() / 60000) % quotes.length;
+      document.getElementById('motivation').textContent = quotes[idx];
+    }
+
+    // --- Actions ---
+    function addWater(ml) {
+      state.amount += ml;
+      state.records.push({ amount: ml, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) });
+      saveState();
+      render();
+
+      // Check milestones
+      if (state.amount >= GOAL && state.amount - ml < GOAL) {
+        showToast('🎉', '太棒了！今日喝水目标已达成！');
+        celebrate();
+      } else if (state.amount >= GOAL * 0.5 && state.amount - ml < GOAL * 0.5) {
+        showToast('💪', '已达成一半目标！继续加油！');
+      } else if (state.amount >= GOAL * 0.75 && state.amount - ml < GOAL * 0.75) {
+        showToast('🔥', '已达成 75%！胜利在望！');
+      } else {
+        showToast('💧', `+${ml}ml 记录成功`);
+      }
+    }
+
+    function addCustomWater() {
+      const input = document.getElementById('customAmount');
+      const val = parseInt(input.value);
+      if (!val || val <= 0 || val > 2000) {
+        showToast('⚠️', '请输入 1-2000 之间的毫升数');
+        return;
+      }
+      addWater(val);
+      input.value = '';
+    }
+
+    function deleteRecord(index) {
+      const record = state.records[index];
+      state.amount = Math.max(0, state.amount - record.amount);
+      state.records.splice(index, 1);
+      saveState();
+      render();
+    }
+
+    function clearHistory() {
+      if (state.records.length === 0) return;
+      state.amount = 0;
+      state.records = [];
+      saveState();
+      render();
+      showToast('🗑️', '记录已清空');
+    }
+
+    // --- Toast ---
+    let toastTimer;
+    function showToast(icon, text) {
+      clearTimeout(toastTimer);
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastText').textContent = text;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // --- Celebration ---
+    function celebrate() {
+      const canvas = document.getElementById('celebrationCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#4db8ff', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb923c'];
+
+      for (let i = 0; i < 80; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: canvas.height + 20,
+          vx: (Math.random() - 0.5) * 8,
+          vy: -(Math.random() * 12 + 6),
+          size: Math.random() * 6 + 3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1,
+          gravity: 0.15,
+          rotation: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 10,
+        });
+      }
+
+      let frame = 0;
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+
+        particles.forEach(p => {
+          if (p.alpha <= 0) return;
+          alive = true;
+          p.vy += p.gravity;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.008;
+          p.rotation += p.rotSpeed;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation * Math.PI / 180);
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+
+        frame++;
+        if (alive && frame < 200) {
+          requestAnimationFrame(animate);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      animate();
+    }
+
+    // --- Reminder ---
+    let reminderEnabled = false;
+    let reminderIntervalId = null;
+
+    function toggleReminder() {
+      reminderEnabled = !reminderEnabled;
+      const toggle = document.getElementById('reminderToggle');
+      const config = document.getElementById('reminderConfig');
+
+      toggle.classList.toggle('active', reminderEnabled);
+      config.classList.toggle('active', reminderEnabled);
+
+      if (reminderEnabled) {
+        requestNotificationPermission();
+        startReminder();
+        showToast('⏰', '喝水提醒已开启');
+      } else {
+        stopReminder();
+        showToast('🔕', '喝水提醒已关闭');
+      }
+
+      localStorage.setItem('water-reminder-enabled', reminderEnabled);
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    function startReminder() {
+      stopReminder();
+      const minutes = parseInt(document.getElementById('reminderInterval').value);
+      reminderIntervalId = setInterval(() => {
+        const remaining = GOAL - state.amount;
+        if (remaining <= 0) {
+          // Goal reached, no need to remind
+          return;
+        }
+        const msg = `该喝水啦！还需 ${remaining}ml 达成今日目标 💧`;
+        showToast('⏰', msg);
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('喝水提醒 💧', { body: msg, icon: '💧' });
+        }
+      }, minutes * 60 * 1000);
+    }
+
+    function stopReminder() {
+      if (reminderIntervalId) {
+        clearInterval(reminderIntervalId);
+        reminderIntervalId = null;
+      }
+    }
+
+    // --- Theme ---
+    function initTheme() {
+      const saved = localStorage.getItem('water-reminder-theme');
+      if (saved === 'dark') {
+        document.body.classList.add('dark');
+        document.getElementById('themeToggle').textContent = '☀️';
+      }
+
+      document.getElementById('themeToggle').addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('water-reminder-theme', isDark ? 'dark' : 'light');
+      });
+    }
+
+    // --- Init ---
+    function init() {
+      // Date display
+      const now = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+      document.getElementById('dateDisplay').textContent = now.toLocaleDateString('zh-CN', options);
+
+      // Theme
+      initTheme();
+
+      // Restore reminder state
+      if (localStorage.getItem('water-reminder-enabled') === 'true') {
+        reminderEnabled = true;
+        document.getElementById('reminderToggle').classList.add('active');
+        document.getElementById('reminderConfig').classList.add('active');
+        startReminder();
+      }
+
+      // Interval change listener
+      document.getElementById('reminderInterval').addEventListener('change', () => {
+        if (reminderEnabled) startReminder();
+      });
+
+      // Enter key for custom input
+      document.getElementById('customAmount').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addCustomWater();
+      });
+
+      // Render
+      render();
+    }
+
+    init();
+  </script>
+</body>
+</html>
