@@ -38,16 +38,24 @@
     .bottle-body { position:absolute; inset:0; border:2.5px solid var(--border); border-radius:8px 8px 14px 14px; overflow:hidden; background:var(--bg); }
     .bottle-cap { position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:28px; height:14px; background:var(--accent); border-radius:6px 6px 0 0; z-index:2; }
     .water-fill { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(180deg,var(--water) 0%,var(--water-dk) 100%); transition:height .5s cubic-bezier(.4,0,.2,1); border-radius:0 0 11px 11px; overflow:hidden; }
-    .wave-layer { position:absolute; top:-6px; left:-10%; width:120%; height:14px; border-radius:50%; }
-    .wave1 { background:var(--water); animation:wave1 2s ease-in-out infinite; }
-    .wave2 { top:-3px; height:10px; background:rgba(255,255,255,.25); animation:wave2 2.6s ease-in-out infinite; }
-    .wave3 { top:-8px; left:-5%; width:110%; height:18px; background:rgba(255,255,255,.12); animation:wave3 3.2s ease-in-out infinite; border-radius:60%; }
-    @keyframes wave1 { 0%,100%{transform:translateX(-4%) rotate(-1.5deg)} 50%{transform:translateX(4%) rotate(1.5deg)} }
-    @keyframes wave2 { 0%,100%{transform:translateX(3%) rotate(1deg)} 50%{transform:translateX(-3%) rotate(-1deg)} }
-    @keyframes wave3 { 0%,100%{transform:translateX(-2%) scaleY(.8)} 50%{transform:translateX(2%) scaleY(1.2)} }
+    .wave-layer { position:absolute; left:-15%; width:130%; border-radius:50%; }
+    .wave1 { top:-8px; height:18px; background:var(--water); animation:wave1 1.8s ease-in-out infinite; }
+    .wave2 { top:-5px; height:12px; background:rgba(255,255,255,.3); animation:wave2 2.4s ease-in-out infinite; }
+    .wave3 { top:-10px; left:-10%; width:120%; height:22px; background:rgba(255,255,255,.12); animation:wave3 3s ease-in-out infinite; border-radius:60%; }
+    .wave4 { top:-6px; left:-8%; width:116%; height:14px; background:rgba(255,255,255,.08); animation:wave4 1.5s ease-in-out infinite; }
+    .wave5 { top:-12px; left:-12%; width:124%; height:24px; background:rgba(24,144,255,.15); animation:wave5 3.6s ease-in-out infinite; border-radius:55%; }
+    @keyframes wave1 { 0%,100%{transform:translateX(-8%) rotate(-2.5deg) scaleY(.85)} 25%{transform:translateX(5%) rotate(1.5deg) scaleY(1.1)} 50%{transform:translateX(8%) rotate(2.5deg) scaleY(.9)} 75%{transform:translateX(-5%) rotate(-1deg) scaleY(1.05)} }
+    @keyframes wave2 { 0%,100%{transform:translateX(6%) rotate(1.5deg) scaleY(1.1)} 33%{transform:translateX(-7%) rotate(-2deg) scaleY(.85)} 66%{transform:translateX(4%) rotate(1deg) scaleY(1.05)} }
+    @keyframes wave3 { 0%,100%{transform:translateX(-4%) scaleY(.75) rotate(-1deg)} 30%{transform:translateX(6%) scaleY(1.2) rotate(1.5deg)} 60%{transform:translateX(-2%) scaleY(.9) rotate(-.5deg)} }
+    @keyframes wave4 { 0%,100%{transform:translateX(5%) rotate(2deg)} 50%{transform:translateX(-6%) rotate(-2deg)} }
+    @keyframes wave5 { 0%,100%{transform:translateX(-3%) scaleY(.8) rotate(.5deg)} 40%{transform:translateX(5%) scaleY(1.15) rotate(-1deg)} 80%{transform:translateX(-1%) scaleY(.95) rotate(.3deg)} }
     .bottle-glow { position:absolute; inset:-3px; border-radius:10px 10px 16px 16px; opacity:0; transition:opacity .5s; box-shadow:0 0 20px var(--water-glow); pointer-events:none; }
     .bottle-glow.on { opacity:1; }
-    .bottle-markers { position:absolute; top:0; right:-26px; height:100%; display:flex; flex-direction:column; justify-content:space-between; font-size:8px; color:var(--text2); }
+    /* Tick marks inside bottle */
+    .bottle-ticks { position:absolute; inset:0; pointer-events:none; }
+    .bottle-tick { position:absolute; left:3px; height:1px; background:var(--border); }
+    .bottle-tick.major { height:1.5px; background:var(--text2); left:2px; }
+    .bottle-tick-label { position:absolute; left:0; font-size:7px; color:var(--text2); line-height:1; white-space:nowrap; transform:translateY(-50%); }
 
     .progress-area { flex:1; min-width:0; }
     .progress-num { font-size:32px; font-weight:700; color:var(--accent); line-height:1; }
@@ -147,13 +155,15 @@
     <div class="bottle-wrap">
       <div class="bottle-cap"></div>
       <div class="bottle-body">
+        <div class="bottle-ticks" id="bottleTicks"></div>
         <div class="water-fill" id="waterFill">
+          <div class="wave-layer wave5"></div>
           <div class="wave-layer wave1"></div>
-          <div class="wave-layer wave2"></div>
           <div class="wave-layer wave3"></div>
+          <div class="wave-layer wave2"></div>
+          <div class="wave-layer wave4"></div>
         </div>
       </div>
-      <div class="bottle-markers"><span>2L</span><span>1L</span><span>0</span></div>
       <div class="bottle-glow" id="bottleGlow"></div>
     </div>
     <div class="progress-area">
@@ -170,7 +180,7 @@
 
   <!-- Quick Add -->
   <div class="add-sec">
-    <div class="sec-title">💧 快速记录</div>
+    <div class="sec-title">📝 快速记录</div>
     <div style="margin-bottom:6px"><div class="type-row" id="typeRow"></div>
       <div class="custom-row hidden" id="customTypeRow">
         <input class="cinput" id="customTypeInput" placeholder="输入饮品名称" />
@@ -303,7 +313,6 @@ function render() {
   // Water fill with gravity transform
   const waterFill = document.getElementById('waterFill');
   waterFill.style.height = pct + '%';
-  waterFill.style.transform = `rotate(${gravityAngle}deg)`;
 
   document.getElementById('curAmt').textContent = state.amount;
   document.getElementById('progBar').style.width = pct + '%';
@@ -316,8 +325,30 @@ function render() {
     document.getElementById('bottleGlow').classList.remove('on');
   }
 
+  renderTicks();
   renderHistory();
   renderPartnerMini();
+}
+
+// ===== BOTTLE TICK MARKS =====
+function renderTicks() {
+  const container = document.getElementById('bottleTicks');
+  if (!container) return;
+  const bottleH = 110; // bottle body height in px (matches CSS)
+  const step = 100; // 100ml per tick
+  let html = '';
+  for (let ml = 0; ml <= GOAL; ml += step) {
+    const pctFromBottom = (ml / GOAL) * 100;
+    const bottomPx = (pctFromBottom / 100) * bottleH;
+    const isMajor = ml % 500 === 0;
+    const tickW = isMajor ? 10 : 5;
+    html += `<div class="bottle-tick${isMajor ? ' major' : ''}" style="bottom:${bottomPx}px;width:${tickW}px"></div>`;
+    if (isMajor) {
+      const label = ml >= 1000 ? (ml / 1000) + 'L' : ml + '';
+      html += `<div class="bottle-tick-label" style="bottom:${bottomPx}px">${label}</div>`;
+    }
+  }
+  container.innerHTML = html;
 }
 
 function renderHistory() {
@@ -399,8 +430,9 @@ let targetAngle = 0;
 function initGravity() {
   function handleOrientation(e) {
     // gamma: left-right tilt (-90 to 90)
+    // When phone tilts right (gamma>0), water surface should tilt left => negative angle
     const gamma = e.gamma || 0;
-    targetAngle = Math.max(-12, Math.min(12, gamma * 0.3));
+    targetAngle = Math.max(-15, Math.min(15, -gamma * 0.35));
   }
 
   // iOS 13+ requires permission
@@ -417,9 +449,13 @@ function initGravity() {
 
   // Smooth interpolation
   function animateGravity() {
-    gravityAngle += (targetAngle - gravityAngle) * 0.1;
+    gravityAngle += (targetAngle - gravityAngle) * 0.08;
     const wf = document.getElementById('waterFill');
-    if (wf) wf.style.transform = `rotate(${gravityAngle}deg)`;
+    if (wf) {
+      // Tilt the water fill container; origin at center bottom so water "pools" correctly
+      wf.style.transformOrigin = '50% 100%';
+      wf.style.transform = `rotate(${gravityAngle}deg)`;
+    }
     requestAnimationFrame(animateGravity);
   }
   animateGravity();
