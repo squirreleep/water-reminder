@@ -386,12 +386,31 @@ async function testWechatPush(){
   else toast('❌','发送失败，请检查 Key 是否正确')}
 
 function startRem(){stopRem();const m=parseInt(document.getElementById('remInterval').value);
+  cfg.remInterval=m;saveCfg();
+  lastRemindTime=Date.now();localStorage.setItem('wr-lastRemind',lastRemindTime);
   remId=setInterval(async()=>{
     const rem=GOAL-state.amount;if(rem<=0)return;
     const msg='该喝水啦！还需 '+rem+'ml 达成今日目标 💧';
     toast('⏰',msg);await pushWechat(msg);
+    lastRemindTime=Date.now();localStorage.setItem('wr-lastRemind',lastRemindTime);
   },m*60000)}
 function stopRem(){if(remId){clearInterval(remId);remId=null}}
+let lastRemindTime=parseInt(localStorage.getItem('wr-lastRemind'))||0;
+
+/* When page comes back to foreground, check if a reminder is overdue */
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||!wechatOn)return;
+  const m=(cfg.remInterval||60)*60000;
+  const elapsed=Date.now()-lastRemindTime;
+  if(elapsed>=m){
+    const rem=GOAL-state.amount;if(rem<=0)return;
+    const msg='该喝水啦！还需 '+rem+'ml 达成今日目标 💧';
+    toast('⏰',msg);await pushWechat(msg);
+    lastRemindTime=Date.now();localStorage.setItem('wr-lastRemind',lastRemindTime);
+    /* Restart the interval timer from now */
+    startRem();
+  }
+});
 
 async function pushWechat(msg){
   const tab=cfg.pushTab||'sct';
