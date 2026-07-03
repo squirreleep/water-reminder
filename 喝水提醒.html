@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>每日喝水提醒</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root {
+      --glass-bg: rgba(255,255,255,0.18);
+      --glass-bg-solid: rgba(255,255,255,0.72);
+      --glass-border: rgba(255,255,255,0.35);
+      --glass-border-inner: rgba(255,255,255,0.55);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.4);
+      --glass-blur: blur(24px) saturate(180%);
+      --water-deep: #0c4a6e;
+      --water-mid: #0ea5e9;
+      --water-light: #67e8f9;
+      --water-mint: #5eead4;
+      --water-glow: rgba(14,165,233,0.35);
+      --water-glow-strong: rgba(14,165,233,0.55);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-tertiary: #94a3b8;
+      --accent: #0ea5e9;
+      --success: #10b981;
+      --danger: #ef4444;
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px; --r-xs: 8px;
+    }
+    .dark {
+      --glass-bg: rgba(15,23,42,0.45);
+      --glass-bg-solid: rgba(30,41,59,0.75);
+      --glass-border: rgba(255,255,255,0.08);
+      --glass-border-inner: rgba(255,255,255,0.12);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      --water-glow: rgba(56,189,248,0.25);
+      --water-glow-strong: rgba(56,189,248,0.45);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-tertiary: #64748b;
+    }
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height:100vh; min-height:100dvh;
+      overflow-x:hidden; transition: background .6s ease;
+      background: linear-gradient(135deg,#e0f2fe 0%,#bae6fd 20%,#cffafe 40%,#ecfeff 60%,#d1fae5 80%,#e0f7fa 100%);
+      background-size: 400% 400%; animation: bgShift 20s ease infinite;
+    }
+    body.dark {
+      background: linear-gradient(135deg,#0c1929 0%,#0f2035 20%,#0a1628 40%,#0d1f33 60%,#08141f 80%,#0b1829 100%);
+      background-size: 400% 400%;
+    }
+    @keyframes bgShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+    .ambient-orbs { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+    .orb { position:absolute; border-radius:50%; filter:blur(80px); opacity:.45; animation:orbFloat 15s ease-in-out infinite; }
+    .orb-1 { width:280px;height:280px;background:var(--water-light);top:-10%;right:-5%;animation-delay:0s; }
+    .orb-2 { width:200px;height:200px;background:var(--water-mint);bottom:20%;left:-8%;animation-delay:-5s; }
+    .orb-3 { width:160px;height:160px;background:var(--water-mid);top:45%;right:-10%;opacity:.3;animation-delay:-10s; }
+    @keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-30px) scale(1.08)} 66%{transform:translate(-15px,20px) scale(.95)} }
+
+    .app { position:relative; z-index:1; max-width:420px; margin:0 auto; padding:16px 16px 0; display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; gap:12px; }
+
+    .lg-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border-radius: var(--r-lg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); position:relative; overflow:hidden; }
+    .lg-card::before { content:''; position:absolute; inset:0; border-radius: inherit; background: linear-gradient(135deg,rgba(255,255,255,0.3) 0%,transparent 50%,rgba(255,255,255,0.05) 100%); pointer-events:none; }
+
+    .hdr { display:flex; justify-content:space-between; align-items:center; padding:2px 2px; }
+    .hdr h1 { font-size:24px; font-weight:800; letter-spacing:-0.5px; background: linear-gradient(135deg,var(--water-deep),var(--water-mid)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    body.dark .hdr h1 { background: linear-gradient(135deg,var(--water-light),var(--water-mint)); -webkit-background-clip:text; background-clip:text; }
+    .hdr-sub { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+    .hdr-r { display:flex; gap:10px; }
+    .icon-btn { width:40px; height:40px; border-radius:var(--r-sm); background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border:1px solid var(--glass-border); cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all .2s cubic-bezier(.34,1.56,.64,1); padding:0; position:relative; overflow:hidden; }
+    .icon-btn:hover { transform: translateY(-1px); }
+    .icon-btn:active { transform:scale(0.88); }
+    .gear-svg { width:20px; height:20px; fill:var(--text-secondary); transition:fill .2s; }
+    .icon-btn:hover .gear-svg { fill:var(--accent); }
+    .theme-icon { font-size:20px; line-height:1; }
+
+    .bottle-sec { padding:18px 18px 16px; display:flex; align-items:center; gap:20px; overflow:hidden; animation: cardSlideIn .5s cubic-bezier(.16,1,.3,1) both; animation-delay:.05s; }
+    @keyframes cardSlideIn { from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+    .bottle-wrap { position:relative; width:104px; height:152px; flex-shrink:0; }
+    .bottle-body { position:absolute; inset:0; border-radius:12px 12px 22px 22px; overflow:hidden; background: linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.2) 50%,rgba(240,250,255,0.4) 100%); border: 2px solid var(--glass-border-inner); box-shadow: inset 0 2px 8px rgba(255,255,255,.4),inset 0 -4px 12px rgba(0,0,0,.04),0 4px 20px rgba(14,165,233,.12); }
+    .bottle-cap { position:absolute; top:-16px; left:50%; transform:translateX(-50%); width:40px; height:18px; border-radius:10px 10px 0 0; z-index:2; background: linear-gradient(180deg,var(--water-mid),var(--water-deep)); box-shadow: 0 2px 8px rgba(14,165,233,.3); }
+    .water-fill { position:absolute; bottom:0; left:0; right:0; background: linear-gradient(180deg,var(--water-light) 0%,var(--water-mid) 40%,var(--water-deep) 100%); transition:height .6s cubic-bezier(.34,1.56,.64,1); border-radius:0 0 20px 20px; overflow:hidden; box-shadow: inset 0 2px 12px rgba(255,255,255,.25),inset 0 -4px 8px rgba(0,0,0,.1); }
+    .water-fill::before { content:'';position:absolute;top:-10px;left:-8%;width:116%;height:20px;background:linear-gradient(180deg,rgba(255,255,255,.4),transparent);border-radius:50%;animation:wave1 2.8s ease-in-out infinite; }
+    .water-fill::after { content:'';position:absolute;top:-6px;left:-5%;width:110%;height:14px;background:rgba(255,255,255,.2);border-radius:50%;animation:wave2 3.4s ease-in-out infinite; }
+    @keyframes wave1 { 0%,100%{transform:translateX(-4%) rotate(-2deg)} 50%{transform:translateX(4%) rotate(2deg)} }
+    @keyframes wave2 { 0%,100%{transform:translateX(4%) rotate(1.5deg)} 50%{transform:translateX(-4%) rotate(-1.5deg)} }
+    .bottle-glow { position:absolute; inset:-6px; border-radius:14px 14px 26px 26px; opacity:0; transition:opacity .6s; background: radial-gradient(ellipse at center,var(--water-glow-strong),transparent 70%); pointer-events:none; filter:blur(4px); }
+    .bottle-glow.on { opacity:1; animation:pulseGlow 2s ease-in-out infinite; }
+    @keyframes pulseGlow { 0%,100%{opacity:.7} 50%{opacity:1} }
+    .bottle-ticks { position:absolute; inset:0; pointer-events:none; z-index:1; }
+    .bottle-tick { position:absolute; left:5px; height:1px; background:rgba(148,163,184,.35); }
+    .bottle-tick.major { height:1.5px; background:rgba(71,85,105,.5); left:4px; }
+    .bottle-tick-label { position:absolute; left:1px; font-size:7px; color:var(--text-tertiary); line-height:1; white-space:nowrap; transform:translateY(-50%); opacity:.65; font-weight:500; }
+
+    .progress-area { flex:1; min-width:0; }
+    .progress-num { font-size:38px; font-weight:900; line-height:1.1; letter-spacing:-1.5px; background: linear-gradient(135deg,var(--water-deep),var(--water-mid),var(--water-mint)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    body.dark .progress-num { background: linear-gradient(135deg,var(--water-light),var(--water-mint)); -webkit-background-clip:text; background-clip:text; }
+    .progress-num small { font-size:14px; font-weight:500; color:var(--text-secondary); -webkit-text-fill-color:initial; background:none; letter-spacing:0; }
+    .progress-sub { font-size:13px; color:var(--text-secondary); margin-top:4px; font-weight:500; }
+    .progress-bar { margin-top:10px; height:8px; background:rgba(0,0,0,.06); border-radius:4px; overflow:hidden; position:relative; }
+    body.dark .progress-bar { background:rgba(255,255,255,.08); }
+    .progress-bar-fill { height:100%; border-radius:4px; background: linear-gradient(90deg,var(--water-mid),var(--water-mint),var(--water-light)); background-size: 200% 100%; animation: shimmer 3s ease infinite; transition:width .6s cubic-bezier(.34,1.56,.64,1); position:relative; }
+    .progress-bar-fill::after { content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:barShine 2.5s ease infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @keyframes barShine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+    .partner-mini { margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--r-sm);background: rgba(14,165,233,.08); border:1px solid rgba(14,165,233,.15); font-size:12px; color:var(--text-secondary); }
+    .partner-mini .name { font-weight:700; color:var(--water-deep); }
+    body.dark .partner-mini .name { color:var(--water-light); }
+    .partner-mini .bar { flex:1; height:5px; background:rgba(0,0,0,.06); border-radius:3px; overflow:hidden; }
+    body.dark .partner-mini .bar { background:rgba(255,255,255,.08); }
+    .partner-mini .bar-fill { height:100%; background:linear-gradient(90deg,var(--success),var(--water-mint)); border-radius:3px; transition:width .6s cubic-bezier(.34,1.56,.64,1); }
+
+    .add-sec { padding:14px 16px; animation: cardSlideIn .5s cubic-bezier(.16,1,.3,1) both; animation-delay:.12s; }
+    .sec-title { font-size:14px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:6px; color:var(--text-primary); }
+    .type-row,.amount-row { display:flex; gap:7px; flex-wrap:wrap; }
+    .pill { padding:8px 14px; border-radius:20px; border:1.5px solid var(--glass-border); background: rgba(255,255,255,.25); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size:12.5px; font-weight:600; cursor:pointer; transition: all .2s cubic-bezier(.34,1.56,.64,1); display:flex; align-items:center; gap:4px; white-space:nowrap; position:relative; overflow:hidden; }
+    .pill:hover { background: rgba(255,255,255,.38); transform: translateY(-1px); }
+    .pill:active { transform:scale(.93); }
+    .pill.sel { border-color: var(--water-mid); background: rgba(14,165,233,.15); color: var(--water-deep); box-shadow: 0 0 16px rgba(14,165,233,.15); }
+    body.dark .pill.sel { color: var(--water-light); }
+    .pill .pi { font-size:15px; }
+    .custom-row { display:flex; gap:7px; margin-top:10px; align-items:center; }
+    .custom-row.hidden { display:none; }
+    .cinput { flex:1; height:40px; border-radius:var(--r-sm); border:1.5px solid var(--glass-border); background: rgba(255,255,255,.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding:0 12px; font-size:13px; color:var(--text-primary); outline:none; font-family:inherit; min-width:0; transition:all .2s; }
+    .cinput:focus { border-color:var(--water-mid); background:rgba(255,255,255,.35); box-shadow:0 0 0 3px rgba(14,165,233,.12); }
+    .cinput::placeholder { color:var(--text-tertiary); }
+    .add-btn { width:100%; height:44px; border-radius:var(--r-md); border:none; background: linear-gradient(135deg,var(--water-mid),var(--water-deep)); color:#fff; font-size:15px; font-weight:700; cursor:pointer; transition: all .25s cubic-bezier(.34,1.56,.64,1); font-family:inherit; margin-top:12px; position:relative; overflow:hidden; box-shadow: 0 4px 16px rgba(14,165,233,.3); letter-spacing:.5px; }
+    .add-btn::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent);opacity:0;transition:opacity .2s; }
+    .add-btn:hover::before { opacity:1; }
+    .add-btn:active { transform:scale(.96); box-shadow:0 2px 8px rgba(14,165,233,.25); }
+
+    .hist-sec { padding:12px 14px; height:32vh; min-height:120px; max-height:220px; display:flex; flex-direction:column; overflow:hidden; animation: cardSlideIn .5s cubic-bezier(.16,1,.3,1) both; animation-delay:.19s; }
+    .hist-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-shrink:0; }
+    .hist-list { flex:1; overflow-y:auto; min-height:0; }
+    .hist-list::-webkit-scrollbar { width:4px; }
+    .hist-list::-webkit-scrollbar-thumb { background:var(--glass-border); border-radius:4px; }
+    .hist-item { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:var(--r-sm); margin-bottom:4px; background: rgba(255,255,255,.15); animation: itemIn .3s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes itemIn { from{opacity:0;transform:translateY(-6px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .hist-left { display:flex; align-items:center; gap:10px; }
+    .hist-icon { font-size:16px; }
+    .hist-amt { font-size:12.5px; font-weight:600; color:var(--text-primary); }
+    .hist-time { font-size:10px; color:var(--text-tertiary); }
+    .hist-del { width:22px; height:22px; border-radius:var(--r-xs); border:none; background:transparent; color:var(--text-tertiary); cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .hist-del:hover { background:rgba(239,68,68,.1); color:var(--danger); }
+    .hist-del:active { transform:scale(.85); }
+    .empty-hint { text-align:center; padding:14px; color:var(--text-tertiary); font-size:12.5px; }
+    .clear-btn { font-size:11px; color:var(--danger); background:none; border:none; cursor:pointer; padding:3px 10px; border-radius:var(--r-xs); font-family:inherit; font-weight:600; transition:background .2s; }
+    .clear-btn:hover { background:rgba(239,68,68,.08); }
+
+    .motivation { text-align:center; padding:12px 18px; font-size:13px; color:var(--text-secondary); font-style:italic; line-height:1.6; min-height:44px; animation: fadeIn .6s ease .3s both; position:relative; }
+    .motivation::before { content:'"';font-size:28px;color:var(--water-mid);opacity:.25;position:absolute;font-family:Georgia,serif;line-height:1;top:-2px;left:12px; }
+    .motivation::after { content:'"';font-size:28px;color:var(--water-mid);opacity:.25;position:absolute;font-family:Georgia,serif;line-height:1;bottom:-12px;right:12px; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.3); backdrop-filter:blur(8px) saturate(120%); -webkit-backdrop-filter:blur(8px) saturate(120%); z-index:100; display:flex; align-items:flex-end; justify-content:center; transition:opacity .3s; opacity:0; pointer-events:none; }
+    .modal-overlay.open { opacity:1; pointer-events:auto; }
+    .modal { background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border-radius:24px 24px 0 0; width:100%; max-width:420px; max-height:85vh; overflow-y:auto; padding:22px 18px 36px; transform:translateY(100%); transition:transform .4s cubic-bezier(.16,1,.3,1); border:1px solid var(--glass-border); border-bottom:none; box-shadow: 0 -8px 48px rgba(0,0,0,.12); }
+    .modal-overlay.open .modal { transform:translateY(0); }
+    .modal-handle { width:36px; height:4.5px; background:var(--glass-border); border-radius:3px; margin:0 auto 18px; }
+    .modal h2 { font-size:18px; font-weight:800; margin-bottom:16px; color:var(--text-primary); }
+    .s-group { margin-bottom:20px; }
+    .s-label { font-size:13px; font-weight:700; margin-bottom:7px; display:flex; align-items:center; gap:5px; color:var(--text-primary); }
+    .s-desc { font-size:11.5px; color:var(--text-tertiary); margin-bottom:6px; line-height:1.5; }
+    .s-input { width:100%; height:42px; border-radius:var(--r-sm); border:1.5px solid var(--glass-border); background:rgba(255,255,255,.3); padding:0 12px; font-size:13px; color:var(--text-primary); outline:none; font-family:inherit; transition:all .2s; }
+    .s-input:focus { border-color:var(--water-mid); box-shadow:0 0 0 3px rgba(14,165,233,.1); background:rgba(255,255,255,.45); }
+    .s-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .toggle { position:relative; width:48px; height:27px; background:rgba(0,0,0,.1); border-radius:14px; cursor:pointer; transition:all .3s cubic-bezier(.34,1.56,.64,1); flex-shrink:0; border:1.5px solid var(--glass-border); }
+    .toggle.on { background: var(--water-mid); border-color: var(--water-mid); }
+    .toggle::after { content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;background:#fff;border-radius:50%; transition: transform .3s cubic-bezier(.34,1.56,.64,1); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+    .toggle.on::after { transform: translateX(21px); }
+    .s-select { height:38px; border-radius:var(--r-xs); border:1.5px solid var(--glass-border); background:rgba(255,255,255,.3); padding:0 10px; font-size:12.5px; color:var(--text-primary); outline:none; font-family:inherit; }
+    .s-link { display:inline-block; color:var(--water-mid); font-size:11.5px; text-decoration:none; font-weight:600; border-bottom:1.5px solid rgba(14,165,233,.3); transition:border-color .2s; cursor:pointer; }
+    .s-link:hover { border-color: var(--water-mid); }
+    .s-btn { height:38px; padding:0 18px; border-radius:var(--r-sm); border:none; background:linear-gradient(135deg,var(--water-mid),var(--water-deep)); color:#fff; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; transition: all .2s cubic-bezier(.34,1.56,.64,1); box-shadow: 0 2px 10px rgba(14,165,233,.2); }
+    .s-btn:active { transform:scale(.94); }
+    .s-btn.secondary { background: rgba(14,165,233,.1); color:var(--water-mid); box-shadow:none; border:1.5px solid rgba(14,165,233,.2); }
+    .s-btn.secondary:active { background: rgba(14,165,233,.18); }
+    .partner-status { padding:12px; background:rgba(14,165,233,.06); border-radius:var(--r-sm); border:1px solid rgba(14,165,233,.1); font-size:11.5px; margin-top:10px; line-height:1.6; color:var(--text-secondary); }
+    .s-tab-row { display:flex;gap:0;margin-bottom:10px;border-radius:var(--r-sm);overflow:hidden;border:1.5px solid var(--glass-border);background:rgba(0,0,0,.03); }
+    .s-tab { flex:1;text-align:center;padding:9px 6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-tertiary);transition:all .2s;border:none;font-family:inherit; }
+    .s-tab.sel { background: rgba(14,165,233,.12); color:var(--water-mid); }
+    .s-tab-panel { display:none; }
+    .s-tab-panel.sel { display:block; animation: fadeIn .25s ease; }
+
+    .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border:1px solid var(--glass-border); padding:12px 22px; border-radius:16px; box-shadow: 0 8px 32px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.4); z-index:200; display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--text-primary); transition: transform .4s cubic-bezier(.34,1.56,.64,1); max-width:90vw; }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+    .toast .ti { font-size:20px; }
+
+    canvas.celeb { position:fixed; inset:0; pointer-events:none; z-index:150; }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } .orb { animation:none !important; } }
+    @supports(padding-bottom:env(safe-area-inset-bottom)) { .app { padding-bottom:calc(0px + env(safe-area-inset-bottom)); } }
+  </style>
+</head>
+<body>
+<div class="ambient-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+<div class="app">
+  <div class="hdr">
+    <div><h1>今日喝水</h1><div class="hdr-sub" id="dateDisp"></div></div>
+    <div class="hdr-r">
+      <button class="icon-btn" id="settingsBtn" title="设置"><svg class="gear-svg" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 0 7m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.65-.07-.97l2.11-1.63a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.13 7.13 0 0 0-1.67-.97l-.38-2.65a.49.49 0 0 0-.49-.41h-4a.49.49 0 0 0-.49.41l-.38 2.65c-.61.25-1.17.59-1.67.97l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.63c-.04.32-.07.65-.07.97s.03.65.07.97l-2.11 1.63a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .61.22l2.49-1c.5.38 1.06.72 1.67.97l.38 2.65c.04.24.25.41.49.41h4c.24 0 .45-.17.49-.41l.38-2.65c.61-.25 1.17-.59 1.67-.97l2.49 1a.5.5 0 0 0 .61.22l-2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.63z"/></svg></button>
+      <button class="icon-btn" id="themeBtn" title="切换主题"><span class="theme-icon">🌙</span></button>
+    </div>
+  </div>
+
+  <div class="bottle-sec lg-card">
+    <div class="bottle-wrap">
+      <div class="bottle-cap"></div>
+      <div class="bottle-body"><div class="bottle-ticks" id="bottleTicks"></div><div class="water-fill" id="waterFill"></div></div>
+      <div class="bottle-glow" id="bottleGlow"></div>
+    </div>
+    <div class="progress-area">
+      <div class="progress-num"><span id="curAmt">0</span><small>ml / 2000ml</small></div>
+      <div class="progress-sub" id="progSub">还需 2000ml 达成目标</div>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progBar"></div></div>
+      <div class="partner-mini" id="partnerMini" style="display:none"><span class="name" id="partnerName"></span><span id="partnerAmt">0ml</span><div class="bar"><div class="bar-fill" id="partnerBar"></div></div></div>
+    </div>
+  </div>
+
+  <div class="add-sec lg-card">
+    <div class="sec-title">快速记录</div>
+    <div style="margin-bottom:8px"><div class="type-row" id="typeRow"></div><div class="custom-row hidden" id="customTypeRow"><input class="cinput" id="customTypeInput" placeholder="输入饮品名称"/></div></div>
+    <div><div class="amount-row" id="amountRow"></div><div class="custom-row hidden" id="customAmtRow"><input class="cinput" id="customAmtInput" type="number" placeholder="毫升数" min="1" max="5000"/></div></div>
+    <button class="add-btn" onclick="doAdd()">记录饮水</button>
+  </div>
+
+  <div class="hist-sec lg-card">
+    <div class="hist-hdr"><div class="sec-title" style="margin:0">今日记录</div><button class="clear-btn" onclick="clearHist()">清空</button></div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+
+  <div class="motivation" id="motivation"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>设置</h2>
+    <div class="s-group">
+      <div class="s-label">定时提醒（微信推送）</div>
+      <div class="s-desc">到点自动发微信消息提醒喝水。选择推送方式并填入对应 Key。</div>
+      <div class="s-tab-row">
+        <button class="s-tab sel" onclick="switchPushTab('sct')" id="tabSct">Server酱</button>
+        <button class="s-tab" onclick="switchPushTab('wecom')" id="tabWecom">Wecom酱</button>
+      </div>
+      <div class="s-tab-panel sel" id="panelSct">
+        <div class="s-desc">微信扫码关注「Server酱」公众号获取 SendKey。免费版每天5条。<a class="s-link" href="https://sct.ftqq.com/" target="_blank">获取 SendKey →</a></div>
+        <input class="s-input" id="sctKey" placeholder="填入 Server酱 SendKey"/>
+      </div>
+      <div class="s-tab-panel" id="panelWecom">
+        <div class="s-desc">基于企业微信，完全免费开源，无消息数量限制。<a class="s-link" href="https://github.com/e7h4n/wecomchan" target="_blank">配置指南 →</a></div>
+        <input class="s-input" id="wecomKey" placeholder="填入 Wecom酱 Webhook Key" style="margin-bottom:6px"/>
+        <input class="s-input" id="wecomCorpId" placeholder="企业 ID（corpid）"/>
+      </div>
+      <div class="s-row" style="margin-top:12px">
+        <span style="font-size:13px;font-weight:500;color:var(--text-primary)">启用微信提醒</span>
+        <div class="toggle" id="wechatToggle" onclick="toggleWechat()"></div>
+      </div>
+      <div id="wechatCfg" style="opacity:.4;pointer-events:none;transition:all .3s;margin-top:10px">
+        <div class="s-row"><span style="font-size:12px;color:var(--text-secondary)">每隔</span>
+          <select class="s-select" id="remInterval"><option value="30">30分钟</option><option value="60" selected>1小时</option><option value="90">1.5小时</option><option value="120">2小时</option></select>
+          <span style="font-size:12px;color:var(--text-secondary)">提醒一次</span></div>
+        <button class="s-btn secondary" onclick="testWechatPush()" style="width:100%;margin-top:8px;height:36px;">测试发送一条提醒</button>
+      </div>
+    </div>
+    <div class="s-group">
+      <div class="s-label">亲友同步（GitHub Gist）</div>
+      <div class="s-desc">用 GitHub Gist 云端同步数据，互相查看饮水量。需令牌（勾选 gist 权限）。<a class="s-link" href="https://github.com/settings/tokens/new" target="_blank">创建令牌 →</a></div>
+      <input class="s-input" id="ghToken" placeholder="GitHub Personal Access Token（需gist权限）" style="margin-bottom:8px"/>
+      <div class="s-row" style="margin-bottom:8px">
+        <span style="font-size:13px;font-weight:500;color:var(--text-primary)">启用同步</span>
+        <div class="toggle" id="syncToggle" onclick="toggleSync()"></div>
+      </div>
+      <div id="syncCfg" style="opacity:.4;pointer-events:none;transition:all .3s">
+        <input class="s-input" id="partnerGistId" placeholder="对方的 Gist ID（对方分享给你）" style="margin-bottom:8px"/>
+        <div class="s-row" style="margin-bottom:8px">
+          <button class="s-btn" onclick="createMyGist()">创建我的 Gist</button>
+          <button class="s-btn secondary" onclick="copyMyGistId()">复制我的 Gist ID</button>
+        </div>
+        <div class="partner-status" id="syncStatus">尚未配置同步</div>
+      </div>
+    </div>
+    <button class="s-btn" style="width:100%;margin-top:10px;height:44px;" onclick="closeSettings()">完成</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="ti" id="toastI">💧</span><span id="toastT"></span></div>
+<canvas class="celeb" id="celebCanvas"></canvas>
+
+<script>
+const GOAL = 2000;
+const DRINK_TYPES = [{id:'water',name:'矿泉水',icon:'💧'},{id:'coffee',name:'咖啡',icon:'☕'},{id:'tea',name:'茶',icon:'🍵'},{id:'custom',name:'自定义',icon:'✏️'}];
+const AMOUNTS = [{val:100,label:'100ml'},{val:500,label:'500ml'},{val:1000,label:'1000ml'},{val:-1,label:'自定义'}];
+const QUOTES = ['水是生命之源，每一口都在滋养你的身体','多喝水，皮肤好，状态更好','喝水能提神醒脑，工作更高效','保持水分充足，身体会感谢你的','一小口水，一份对自己的关爱','健康生活，从喝水开始','足够的水分让你精力充沛','记得喝水，我在关心你哦','喝水不多，好处不少','今天你喝水了吗？别忘了照顾自己','一杯温水，温暖整个下午','好习惯从喝水开始，坚持就是胜利'];
+
+let selType='water',selAmount=500,state=loadState();
+function today(){return new Date().toISOString().slice(0,10)}
+function loadState(){try{const s=localStorage.getItem('wr-state');if(s){const p=JSON.parse(s);if(p.date===today())return p}}catch(e){}return{date:today(),amount:0,records:[]}}
+function save(){state.date=today();localStorage.setItem('wr-state',JSON.stringify(state))}
+let cfg=loadCfg();
+function loadCfg(){try{return JSON.parse(localStorage.getItem('wr-cfg')||'{}')}catch(e){return{}}}
+function saveCfg(){localStorage.setItem('wr-cfg',JSON.stringify(cfg))}
+
+function render(){
+  const pct=Math.min(state.amount/GOAL*100,100),rem=Math.max(GOAL-state.amount,0);
+  document.getElementById('waterFill').style.height=pct+'%';
+  document.getElementById('curAmt').textContent=state.amount;
+  document.getElementById('progBar').style.width=pct+'%';
+  if(state.amount>=GOAL){document.getElementById('progSub').textContent='目标已达成！';document.getElementById('bottleGlow').classList.add('on')}
+  else{document.getElementById('progSub').textContent='还需 '+rem+'ml 达成目标';document.getElementById('bottleGlow').classList.remove('on')}
+  renderTicks();renderHistory();renderPartnerMini();renderQuote();
+}
+
+function renderTicks(){const c=document.getElementById('bottleTicks');if(!c)return;const H=152;let h='';
+  for(let ml=0;ml<=GOAL;ml+=100){const bot=(ml/GOAL)*H,major=ml%500===0,tw=major?12:6;
+    h+='<div class="bottle-tick'+(major?' major':'')+'" style="bottom:'+bot+'px;width:'+tw+'px"></div>';
+    if(major){const label=ml>=1000?(ml/1000)+'L':ml+'';h+='<div class="bottle-tick-label" style="bottom:'+bot+'px">'+label+'</div>'}}
+  c.innerHTML=h;}
+
+function renderHistory(){const el=document.getElementById('histList');
+  if(!state.records.length){el.innerHTML='<div class="empty-hint">还没有记录，喝杯水吧 💧</div>';return}
+  el.innerHTML=state.records.slice().reverse().map((r,i)=>{const idx=state.records.length-1-i;
+    return'<div class="hist-item"><div class="hist-left"><span class="hist-icon">'+(r.icon||'💧')+'</span><div><div class="hist-amt">'+r.amount+'ml '+(r.type||'')+'</div><div class="hist-time">'+r.time+'</div></div></div><button class="hist-del" onclick="delRec('+idx+')">✕</button></div>'}).join('');}
+
+function renderPartnerMini(){const el=document.getElementById('partnerMini');if(!partnerData){el.style.display='none';return}
+  el.style.display='flex';document.getElementById('partnerName').textContent=partnerData.name||'亲友';
+  document.getElementById('partnerAmt').textContent=partnerData.amount+'ml';
+  document.getElementById('partnerBar').style.width=Math.min(partnerData.amount/GOAL*100,100)+'%'}
+
+function renderQuote(){const idx=Math.floor(Date.now()/60000)%QUOTES.length;document.getElementById('motivation').textContent=QUOTES[idx]}
+
+function buildSelectors(){
+  const tr=document.getElementById('typeRow');
+  tr.innerHTML=DRINK_TYPES.map(t=>'<div class="pill'+(t.id===selType?' sel':'')" onclick="pickType(\''+t.id+'\')">'+(t.id!=='custom'?'<span class="pi">'+t.icon+'</span>':'')+t.name+'</div>').join('');
+  const ar=document.getElementById('amountRow');
+  ar.innerHTML=AMOUNTS.map(a=>'<div class="pill'+(a.val===selAmount?' sel':'')" onclick="pickAmount('+a.val+')">'+a.label+'</div>').join('');
+  document.getElementById('customTypeRow').classList.toggle('hidden',selType!=='custom');
+  document.getElementById('customAmtRow').classList.toggle('hidden',selAmount!==-1);}
+function pickType(id){selType=id;buildSelectors()}
+function pickAmount(v){selAmount=v;buildSelectors()}
+
+function doAdd(){
+  const typeObj=DRINK_TYPES.find(t=>t.id===selType);let typeName=typeObj.name,typeIcon=typeObj.icon;
+  if(selType==='custom'){typeName=document.getElementById('customTypeInput').value.trim();if(!typeName){toast('⚠️','请输入饮品名称');return}typeIcon='🥤'}
+  let ml=selAmount;if(ml===-1){ml=parseInt(document.getElementById('customAmtInput').value);if(!ml||ml<=0||ml>5000){toast('⚠️','请输入1-5000之间的毫升数');return}}
+  state.amount+=ml;state.records.push({amount:ml,type:typeName,icon:typeIcon,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+  save();render();syncToGist();
+  if(state.amount>=GOAL&&state.amount-ml<GOAL){toast('🎉','目标达成！');celebrate()}
+  else if(state.amount>=GOAL*.5&&state.amount-ml<GOAL*.5)toast('💪','已过半！继续加油')
+  else if(state.amount>=GOAL*.75&&state.amount-ml<GOAL*.75)toast('🔥','75%了！胜利在望')
+  else toast(typeIcon,'+'+ml+'ml '+typeName)}
+
+function delRec(i){const r=state.records[i];state.amount=Math.max(0,state.amount-r.amount);state.records.splice(i,1);save();render();syncToGist()}
+function clearHist(){if(!state.records.length)return;state.amount=0;state.records=[];save();render();syncToGist();toast('🗑️','已清空')}
+
+/* ===== WECHAT REMINDER (ENHANCED WITH ERROR FEEDBACK & TEST BUTTON) ===== */
+let wechatOn=false,remId=null,pushTab='sct';
+
+function toggleWechat(){
+  wechatOn=!wechatOn;cfg.wechatOn=wechatOn;
+  document.getElementById('wechatToggle').classList.toggle('on',wechatOn);
+  document.getElementById('wechatCfg').style.opacity=wechatOn?1:.4;
+  document.getElementById('wechatCfg').style.pointerEvents=wechatOn?'auto':'none';
+  saveCfg();
+  if(wechatOn){startRem();toast('💬','微信提醒已开启')}else{stopRem();toast('🔕','微信提醒已关闭')}}
+
+function switchPushTab(tab){
+  pushTab=tab;cfg.pushTab=tab;saveCfg();
+  document.getElementById('tabSct').classList.toggle('sel',tab==='sct');
+  document.getElementById('tabWecom').classList.toggle('sel',tab==='wecom');
+  document.getElementById('panelSct').classList.toggle('sel',tab==='sct');
+  document.getElementById('panelWecom').classList.toggle('sel',tab==='wecom');}
+
+async function testWechatPush(){
+  const tab=cfg.pushTab||'sct';
+  if(tab==='sct'){if(!cfg.sctKey){toast('⚠️','请先填写 Server酱 SendKey');return}}
+  else{if(!cfg.wecomKey){toast('⚠️','请先填写 Wecom酱 Key');return}}
+  toast('⏳','正在发送测试消息...');
+  const ok=await pushWechat('这是一条测试消息，如果你收到了说明配置正确！');
+  if(ok) toast('✅','测试发送成功！请检查微信')
+  else toast('❌','发送失败，请检查 Key 是否正确')}
+
+function startRem(){stopRem();const m=parseInt(document.getElementById('remInterval').value);
+  remId=setInterval(async()=>{
+    const rem=GOAL-state.amount;if(rem<=0)return;
+    const msg='该喝水啦！还需 '+rem+'ml 达成今日目标 💧';
+    toast('⏰',msg);await pushWechat(msg);
+  },m*60000)}
+function stopRem(){if(remId){clearInterval(remId);remId=null}}
+
+async function pushWechat(msg){
+  const tab=cfg.pushTab||'sct';
+  if(tab==='sct'){
+    const key=cfg.sctKey;if(!key)return false;
+    try{
+      const res=await fetch('https://sctapi.ftqq.com/'+key+'.send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'title='+encodeURIComponent('喝水提醒💧')+'&desp='+encodeURIComponent(msg)});
+      if(res.ok){const d=await res.json();if(d.code===0)return true;else{console.error('Server酱错误:',d);toast('❌','Server酱: '+d.message);return false}}
+      else{toast('❌','网络请求失败 ('+res.status+')');return false}
+    }catch(e){console.error('pushWechat error:',e);toast('❌','发送异常: '+e.message);return false}
+  }else if(tab==='wecom'){
+    const key=cfg.wecomKey;if(!key)return false;
+    try{
+      const res=await fetch('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgtype:'text',text:{content:'喝水提醒💧 '+msg}})});
+      if(res.ok){const d=await res.json();if(d.errcode===0)return true;else{console.error('Wecom酱错误:',d);toast('❌','Wecom酱: '+d.errmsg);return false}}
+      else{toast('❌','网络请求失败 ('+res.status+')');return false}
+    }catch(e){console.error('pushWecom error:',e);toast('❌','发送异常: '+e.message);return false}
+  }
+  return false;
+}
+
+/* ===== SYNC ===== */
+let partnerData=null;
+function toggleSync(){
+  cfg.syncOn=!cfg.syncOn;
+  document.getElementById('syncToggle').classList.toggle('on',cfg.syncOn);
+  document.getElementById('syncCfg').style.opacity=cfg.syncOn?1:.4;
+  document.getElementById('syncCfg').style.pointerEvents=cfg.syncOn?'auto':'none';
+  saveCfg();
+  if(cfg.syncOn){startSyncLoop();toast('👥','同步已开启')}else{toast('🔕','同步已关闭')}}
+async function ghApi(method,path,body){
+  const token=cfg.ghToken;if(!token)return null;
+  const opts={method,headers:{'User-Agent':'WaterReminder','Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch('https://api.github.com'+path,opts);return res.json();}
+async function createMyGist(){
+  if(!cfg.ghToken){toast('⚠️','请先填写 GitHub 令牌');return}
+  const data={date:today(),amount:state.amount,name:cfg.myName||'我'};
+  try{if(cfg.myGistId){await ghApi('PATCH','/gists/'+cfg.myGistId,{files:{'water-data.json':{content:JSON.stringify(data)}}});toast('✅','Gist 已更新')}
+  else{const res=await ghApi('POST','/gists',{description:'喝水提醒同步数据',public:true,files:{'water-data.json':{content:JSON.stringify(data)}}});
+    if(res&&res.id){cfg.myGistId=res.id;saveCfg();toast('✅','Gist 创建成功！把 ID 分享给亲友')}else toast('⚠️','创建失败，请检查令牌权限')}}catch(e){toast('⚠️','同步出错')}
+  updateSyncStatus();}
+async function syncToGist(){if(!cfg.syncOn||!cfg.ghToken||!cfg.myGistId)return;const data={date:today(),amount:state.amount,name:cfg.myName||'我'};
+  try{await ghApi('PATCH','/gists/'+cfg.myGistId,{files:{'water-data.json':{content:JSON.stringify(data)}}})}catch(e){}}
+async function fetchPartner(){const gistId=cfg.partnerGistId;if(!gistId)return;
+  try{const res=await fetch('https://api.github.com/gists/'+gistId);const data=await res.json();
+    if(data.files&&data.files['water-data.json']){const c=JSON.parse(data.files['water-data.json'].content);partnerData={name:c.name||'亲友',amount:(c.date===today()?c.amount:0)||0};renderPartnerMini()}}
+  catch(e){}}
+let syncLoop=null;
+function startSyncLoop(){if(syncLoop)clearInterval(syncLoop);syncToGist();fetchPartner();syncLoop=setInterval(()=>{syncToGist();fetchPartner()},30000)}
+function copyMyGistId(){if(!cfg.myGistId){toast('⚠️','请先创建 Gist');return}navigator.clipboard.writeText(cfg.myGistId).then(()=>toast('📋','Gist ID 已复制'))}
+function updateSyncStatus(){const el=document.getElementById('syncStatus'),parts=[];
+  if(cfg.myGistId)parts.push('我的 Gist ID: '+cfg.myGistId.slice(0,8)+'...');
+  if(cfg.partnerGistId)parts.push('对方 Gist ID: '+cfg.partnerGistId.slice(0,8)+'...');
+  el.textContent=parts.length?parts.join('\n'):'尚未配置同步'}
+
+/* ===== SETTINGS MODAL ===== */
+function openSettings(){
+  document.getElementById('sctKey').value=cfg.sctKey||'';
+  document.getElementById('wecomKey').value=cfg.wecomKey||'';
+  document.getElementById('wecomCorpId').value=cfg.wecomCorpId||'';
+  document.getElementById('ghToken').value=cfg.ghToken||'';
+  document.getElementById('partnerGistId').value=cfg.partnerGistId||'';
+  document.getElementById('wechatToggle').classList.toggle('on',cfg.wechatOn);
+  document.getElementById('wechatCfg').style.opacity=cfg.wechatOn?1:.4;
+  document.getElementById('wechatCfg').style.pointerEvents=cfg.wechatOn?'auto':'none';
+  wechatOn=cfg.wechatOn;
+  document.getElementById('syncToggle').classList.toggle('on',cfg.syncOn);
+  document.getElementById('syncCfg').style.opacity=cfg.syncOn?1:.4;
+  document.getElementById('syncCfg').style.pointerEvents=cfg.syncOn?'auto':'none';
+  switchPushTab(cfg.pushTab||'sct');updateSyncStatus();
+  document.getElementById('modalOverlay').classList.add('open');}
+function closeSettings(){
+  cfg.sctKey=document.getElementById('sctKey').value.trim();
+  cfg.wecomKey=document.getElementById('wecomKey').value.trim();
+  cfg.wecomCorpId=document.getElementById('wecomCorpId').value.trim();
+  cfg.ghToken=document.getElementById('ghToken').value.trim();
+  cfg.partnerGistId=document.getElementById('partnerGistId').value.trim();
+  saveCfg();
+  if(cfg.syncOn)startSyncLoop();
+  document.getElementById('modalOverlay').classList.remove('open');}
+
+/* ===== TOAST ===== */
+let toastTm;
+function toast(icon,text){clearTimeout(toastTm);document.getElementById('toastI').textContent=icon;document.getElementById('toastT').textContent=text;document.getElementById('toast').classList.add('show');
+  toastTm=setTimeout(()=>document.getElementById('toast').classList.remove('show'),2200)}
+
+/* ===== CELEBRATE ===== */
+function celebrate(){
+  const c=document.getElementById('celebCanvas'),ctx=c.getContext('2d');
+  c.width=innerWidth;c.height=innerHeight;
+  const ps=[],cols=['#44b8ff','#36d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
+  for(let i=0;i<60;i++)ps.push({x:Math.random()*c.width,y:c.height+10,vx:(Math.random()-.5)*7,vy:-(Math.random()*10+5),s:Math.random()*5+2,c:cols[Math.floor(Math.random()*cols.length)],a:1,g:.14,r:Math.random()*360,rs:(Math.random()-.5)*8});
+  let f=0;(function anim(){ctx.clearRect(0,0,c.width,c.height);let alive=false;ps.forEach(p=>{if(p.a<=0)return;alive=true;p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.a-=.01;p.r+=p.rs;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=Math.max(0,p.a);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s);ctx.restore()});f++;if(alive&&f<180)requestAnimationFrame(anim);else ctx.clearRect(0,0,c.width,c.height)})()}
+
+/* ===== THEME ===== */
+function initTheme(){
+  if(localStorage.getItem('wr-theme')==='dark'){document.body.classList.add('dark');document.getElementById('themeBtn').textContent='☀️'}
+  document.getElementById('themeBtn').addEventListener('click',()=>{document.body.classList.toggle('dark');const d=document.body.classList.contains('dark');document.getElementById('themeBtn').textContent=d?'☀️':'🌙';localStorage.setItem('wr-theme',d?'dark':'light')})}
+
+/* ===== QUOTE ROTATION ===== */
+let quoteIdx=Math.floor(Math.random()*QUOTES.length);
+function rotateQuote(){quoteIdx=(quoteIdx+1)%QUOTES.length;document.getElementById('motivation').textContent=QUOTES[quoteIdx]}
+setInterval(rotateQuote,30000);
+
+/* ===== INIT ===== */
+(function init(){
+  const now=new Date();
+  document.getElementById('dateDisp').textContent=now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'short'});
+  initTheme();buildSelectors();
+  document.getElementById('settingsBtn').addEventListener('click',openSettings);
+  document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings()});
+  document.getElementById('remInterval').addEventListener('change',()=>{if(wechatOn)startRem()});
+  if(cfg.wechatOn){wechatOn=true;startRem()}
+  if(cfg.syncOn)startSyncLoop();
+  document.getElementById('customAmtInput').addEventListener('keydown',e=>{if(e.key==='Enter')doAdd()});
+  document.getElementById('customTypeInput').addEventListener('keydown',e=>{if(e.key==='Enter')doAdd()});
+  render();
+})();
+</script>
+</body>
+</html>
